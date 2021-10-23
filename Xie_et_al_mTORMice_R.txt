@@ -1,0 +1,523 @@
+
+
+## 2-way ANOVAs with Fisher LSD posthoc
+## Add 95% confidence intervals for coefficients of age, geno and age x geno interaction
+## Add significance test for Cohen's d (treatment effect size) in young vs old mice
+
+ulimit -s 16384
+export R_MAX_VSIZE=100000000000
+R --max-ppsize 500000
+rm(list=ls())
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses")
+
+library(effsize) # for calculation of cohen's d effect sizes
+library(Rmisc) # for calculation of confidence intervals
+library(agricolae) # for Fisher LSD posthoc test
+
+df <- read.csv2('Merged_all_final6_forANOVAs.csv')
+df_stats <- data.frame()
+df_processed <- data.frame()
+
+colIndex <- 8
+rowIndex <- 0
+cn <- colnames(df)
+
+for(i in 9:ncol(df)) {
+      colIndex <- colIndex + 1
+      rowIndex <- rowIndex + 1
+      colN <- cn[colIndex]
+      print(rowIndex)
+      print(colN)
+      df[, colN] <- as.numeric(as.character(df[, colN]))
+      cc <- complete.cases(df[, colN])
+      df_temp <- df[cc, ]
+      youngControl <- df_temp[df_temp$genotype == 'control' & df_temp$age == 'young', ]
+      mean_youngControl <- mean(youngControl[, colN])
+      ci_youngControl <- CI(youngControl[, colN], ci=0.95)
+      sd_youngControl <- sd(youngControl[, colN])
+      n_youngControl <- length(youngControl[, colN])
+
+      youngMutant <- df_temp[df_temp$genotype == 'mutant' & df_temp$age == 'young', ]
+      mean_youngMutant <- mean(youngMutant[, colN])
+      ci_youngMutant <- CI(youngMutant[, colN], ci=0.95)
+      sd_youngMutant <- sd(youngMutant[, colN])
+      n_youngMutant <- length(youngMutant[, colN])
+
+      oldControl <- df_temp[df_temp$genotype == 'control' & df_temp$age == 'old', ]
+      mean_oldControl <- mean(oldControl[, colN])
+      ci_oldControl <- CI(oldControl[, colN], ci=0.95)
+      sd_oldControl <- sd(oldControl[, colN])
+      n_oldControl <- length(oldControl[, colN])
+
+      oldMutant <- df_temp[df_temp$genotype == 'mutant' & df_temp$age == 'old', ]
+      mean_oldMutant <- mean(oldMutant[, colN])
+      ci_oldMutant <- CI(oldMutant[, colN], ci=0.95)
+      sd_oldMutant <- sd(oldMutant[, colN])
+      n_oldMutant <- length(oldMutant[, colN])
+
+      # set reference level such that a negative coefficient for genotype means reduction in the mutants
+      # and a negative coefficient for age means reductions in old
+      df_temp$genotype <- factor(df_temp$genotype, levels = c('mutant', 'control'))
+      df_temp$age<- factor(df_temp$age, levels = c('old', 'young'))
+
+      model <- lm(df_temp[, colN] ~ genotype * age, data = df_temp)
+      options(contrasts = c('contr.sum', 'contr.poly'))
+      aov_colN <- aov(df_temp[, colN] ~ genotype * age, data = df_temp)
+      p_geno <- summary(aov_colN)[[1]][[1,"Pr(>F)"]]
+      p_age <- summary(aov_colN)[[1]][[2,"Pr(>F)"]]
+      p_genoXage <- summary(aov_colN)[[1]][[3,"Pr(>F)"]]
+
+      ci_geno_upper <- confint(aov_colN)[[6]]
+      ci_geno_lower <- confint(aov_colN)[[2]]
+      ci_age_upper <- confint(aov_colN)[[7]]
+      ci_age_lower <- confint(aov_colN)[[3]]
+      ci_genoXage_upper <- confint(aov_colN)[[8]]
+      ci_genoXage_lower <- confint(aov_colN)[[4]]
+
+      df_stats[rowIndex, 1] <- colN
+      df_stats[rowIndex, 2] <- mean_youngControl
+      df_stats[rowIndex, 3] <- ci_youngControl[1]
+      df_stats[rowIndex, 4] <- ci_youngControl[2]
+      df_stats[rowIndex, 5] <- ci_youngControl[3]
+      df_stats[rowIndex, 6] <- sd_youngControl
+      df_stats[rowIndex, 7] <- n_youngControl
+
+      df_stats[rowIndex, 8] <- mean_youngMutant
+      df_stats[rowIndex, 9] <- ci_youngMutant[1]
+      df_stats[rowIndex, 10] <- ci_youngMutant[2]
+      df_stats[rowIndex, 11] <- ci_youngMutant[3]
+      df_stats[rowIndex, 12] <- sd_youngMutant
+      df_stats[rowIndex, 13] <- n_youngMutant
+
+      df_stats[rowIndex, 14] <- mean_oldControl
+      df_stats[rowIndex, 15] <- ci_oldControl[1]
+      df_stats[rowIndex, 16] <- ci_oldControl[2]
+      df_stats[rowIndex, 17] <- ci_oldControl[3]
+      df_stats[rowIndex, 18] <- sd_oldControl
+      df_stats[rowIndex, 19] <- n_oldControl
+
+      df_stats[rowIndex, 20] <- mean_oldMutant
+      df_stats[rowIndex, 21] <- ci_oldMutant[1]
+      df_stats[rowIndex, 22] <- ci_oldMutant[2]
+      df_stats[rowIndex, 23] <- ci_oldMutant[3]
+      df_stats[rowIndex, 24] <- sd_oldMutant
+      df_stats[rowIndex, 25] <- n_oldMutant
+
+      df_stats[rowIndex, 26] <- p_geno
+      df_stats[rowIndex, 27] <- p_age
+      df_stats[rowIndex, 28] <- p_genoXage
+
+      df_stats[rowIndex, 29] <- ci_geno_upper
+      df_stats[rowIndex, 30] <- ci_geno_lower
+      df_stats[rowIndex, 31] <- ci_age_upper
+      df_stats[rowIndex, 32] <- ci_age_lower
+      df_stats[rowIndex, 33] <- ci_genoXage_upper
+      df_stats[rowIndex, 34] <- ci_genoXage_lower
+
+      posthoc_colN <- LSD.test(aov_colN, c('age', 'genotype'), group = FALSE)
+      df_stats[rowIndex, 35] <- posthoc_colN$comparison['old:control - old:mutant', 'pvalue']
+      df_stats[rowIndex, 36] <- posthoc_colN$comparison['old:control - young:control', 'pvalue']
+      df_stats[rowIndex, 37] <- posthoc_colN$comparison['old:control - young:mutant', 'pvalue']
+      df_stats[rowIndex, 38] <- posthoc_colN$comparison['old:mutant - young:control', 'pvalue']
+      df_stats[rowIndex, 39] <- posthoc_colN$comparison['old:mutant - young:mutant', 'pvalue']
+      df_stats[rowIndex, 40] <- posthoc_colN$comparison['young:control - young:mutant', 'pvalue']
+
+      df_temp_young <- df_temp[df_temp$age == 'young', ]
+      df_temp_old <- df_temp[df_temp$age == 'old', ]
+      df_temp_control <- df_temp[df_temp$genotype == 'control', ]
+      cohen.d_geno_inYoung <- cohen.d(d = df_temp_young[, colN], f = df_temp_young$genotype)
+      cohen.d_geno_inOld <- cohen.d(d = df_temp_old[, colN], f = df_temp_old$genotype)
+      cohen.d_age_inControl <- cohen.d(d = df_temp_control[, colN], f = df_temp_control$age)
+
+
+      df_stats[rowIndex, 41] <- (cohen.d_geno_inYoung$estimate)
+      df_stats[rowIndex, 42] <- (cohen.d_geno_inYoung$conf.int[[1]])
+      df_stats[rowIndex, 43] <- (cohen.d_geno_inYoung$conf.int[[2]])
+
+      df_stats[rowIndex, 44] <- (cohen.d_geno_inOld$estimate)
+      df_stats[rowIndex, 45] <- (cohen.d_geno_inOld$conf.int[[1]])
+      df_stats[rowIndex, 46] <- (cohen.d_geno_inOld$conf.int[[2]])
+
+      df_stats[rowIndex, 47] <- cohen.d_age_inControl$estimate
+      df_stats[rowIndex, 48] <- cohen.d_age_inControl$conf.int[[1]]
+      df_stats[rowIndex, 49] <- cohen.d_age_inControl$conf.int[[2]]
+
+      #calculate test statistic to determine if cohen.d_geno_inYoung differs significantly from cohen.d_geno_inOld
+      #formula described here: https://stats.stackexchange.com/questions/77269/statistical-comparison-of-2-independent-cohens-ds
+      v_geno_inOld <- 1/n_oldControl + 1/n_oldMutant + (((cohen.d_geno_inOld$estimate))^2/(2*(n_oldControl+n_oldMutant)))
+      v_geno_inYoung <- 1/n_youngControl + 1/n_youngMutant + (((cohen.d_geno_inYoung$estimate))^2/(2*(n_youngControl+n_youngMutant)))
+      z <- ((cohen.d_geno_inOld$estimate) - (cohen.d_geno_inYoung$estimate))/sqrt(v_geno_inOld+v_geno_inYoung)
+      df_stats[rowIndex, 50] <- z
+      pvalue2sided=2*pnorm(-abs(z))
+      df_stats[rowIndex, 51] <- pvalue2sided
+}
+
+colnames(df_stats) <- c('phenotype', 'mean_youngContr', 'ci_youngContr_upper', 'ci_youngContr_mean', 'ci_youngContr_lower', 'sd_youngContr', 'n_youngContr', 'mean_youngMut', 'ci_youngMut_upper', 'ci_youngMut_mean', 'ci_youngMut_lower', 'sd_youngMut', 'n_youngMut', 'mean_oldContr', 'ci_oldContr_upper', 'ci_oldContr_mean', 'ci_oldContr_lower', 'sd_oldContr', 'n_oldContr', 'mean_oldMut', 'ci_oldMut_upper', 'ci_oldMut_mean', 'ci_oldMut_lower', 'sd_oldMut', 'n_oldMut', 'aov_p_geno', 'aov_p_age', 'aov_p_genoXage', 'ci_geno_upper', 'ci_geno_lower', 'ci_age_upper', 'ci_age_lower', 'ci_genoXage_upper', 'ci_genoXage_lower',  'post_oldMut_oldContr', 'post_youngContr_oldContr', 'post_youngMut_oldContr', 'post_youngContr_oldMut', 'post_youngMut_oldMut', 'post_youngMut_youngContr', 'cohen.d_genotype_inYoung', 'ci_cohen.d_genotype_inYoung_lower', 'ci_cohen.d_genotype_inYoung_upper', 'cohen.d_genotype_inOld', 'ci_cohen.d_genotype_inOld_lower', 'ci_cohen.d_genotype_inOld_upper', 'cohen.d_age_inControl', 'ci_cohen.d_age_inControl_lower', 'ci_cohen.d_age_inControl_upper', 'z_stat_cohen.d_genotype_inOld_vs_cohen.d_genotype_inYoung', 'p_cohen.d_genotype_inOld_vs_cohen.d_genotype_inYoung')
+
+write.csv(df_stats, file = 'Statistics_2-wayANOVAs_FisherLSD_mTOR_allParameters_withZstatForCohenDcomparison_withCIforCoeff.csv')
+
+
+
+
+
+_____________________________________
+
+## for analysis of non-parametric data; use aligned rank transform
+## add significance test for Cohen's d (treatment effect size) in young vs old mice
+
+
+ulimit -s 16384
+export R_MAX_VSIZE=100000000000
+R --max-ppsize 500000
+rm(list=ls())
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses")
+
+library(effsize) # for calculation of cohen's d effect sizes
+library(Rmisc) # for calculation of confidence intervals
+library(ARTool) # for ART
+
+df <- read.csv2('Merged_all_final6_forNonparametricAnalysis.csv')
+df_stats <- data.frame()
+
+colIndex <- 8
+rowIndex <- 0
+cn <- colnames(df)
+
+for(i in 9:ncol(df)) {
+      # loop through columns 9-end, i.e. all columns with phenotype data
+      colIndex <- colIndex + 1
+      rowIndex <- rowIndex + 1
+      colN <- cn[colIndex]
+      print(rowIndex)
+      print(colN)
+      df[, colN] <- as.numeric(as.character(df[, colN]))
+      cc <- complete.cases(df[, colN])
+      df_temp <- df[cc, ]
+      youngControl <- df_temp[df_temp$genotype == 'control' & df_temp$age == 'young', ]
+      mean_youngControl <- mean(youngControl[, colN])
+      ci_youngControl <- CI(youngControl[, colN], ci=0.95)
+      sd_youngControl <- sd(youngControl[, colN])
+      n_youngControl <- length(youngControl[, colN])
+
+      youngMutant <- df_temp[df_temp$genotype == 'mutant' & df_temp$age == 'young', ]
+      mean_youngMutant <- mean(youngMutant[, colN])
+      ci_youngMutant <- CI(youngMutant[, colN], ci=0.95)
+      sd_youngMutant <- sd(youngMutant[, colN])
+      n_youngMutant <- length(youngMutant[, colN])
+
+      oldControl <- df_temp[df_temp$genotype == 'control' & df_temp$age == 'old', ]
+      mean_oldControl <- mean(oldControl[, colN])
+      ci_oldControl <- CI(oldControl[, colN], ci=0.95)
+      sd_oldControl <- sd(oldControl[, colN])
+      n_oldControl <- length(oldControl[, colN])
+
+      oldMutant <- df_temp[df_temp$genotype == 'mutant' & df_temp$age == 'old', ]
+      mean_oldMutant <- mean(oldMutant[, colN])
+      ci_oldMutant <- CI(oldMutant[, colN], ci=0.95)
+      sd_oldMutant <- sd(oldMutant[, colN])
+      n_oldMutant <- length(oldMutant[, colN])
+
+      m = art(df_temp[, colN] ~ genotype * age, data = df_temp)
+      np_anova <- anova(m)
+      p_geno <- np_anova$'Pr(>F)'[1]
+      p_age <- np_anova$'Pr(>F)'[2]
+      p_genoXage <- np_anova$'Pr(>F)'[3]
+
+      df_stats[rowIndex, 1] <- colN
+      df_stats[rowIndex, 2] <- mean_youngControl
+      df_stats[rowIndex, 3] <- ci_youngControl[1]
+      df_stats[rowIndex, 4] <- ci_youngControl[2]
+      df_stats[rowIndex, 5] <- ci_youngControl[3]
+      df_stats[rowIndex, 6] <- sd_youngControl
+      df_stats[rowIndex, 7] <- n_youngControl
+
+      df_stats[rowIndex, 8] <- mean_youngMutant
+      df_stats[rowIndex, 9] <- ci_youngMutant[1]
+      df_stats[rowIndex, 10] <- ci_youngMutant[2]
+      df_stats[rowIndex, 11] <- ci_youngMutant[3]
+      df_stats[rowIndex, 12] <- sd_youngMutant
+      df_stats[rowIndex, 13] <- n_youngMutant
+
+      df_stats[rowIndex, 14] <- mean_oldControl
+      df_stats[rowIndex, 15] <- ci_oldControl[1]
+      df_stats[rowIndex, 16] <- ci_oldControl[2]
+      df_stats[rowIndex, 17] <- ci_oldControl[3]
+      df_stats[rowIndex, 18] <- sd_oldControl
+      df_stats[rowIndex, 19] <- n_oldControl
+
+      df_stats[rowIndex, 20] <- mean_oldMutant
+      df_stats[rowIndex, 21] <- ci_oldMutant[1]
+      df_stats[rowIndex, 22] <- ci_oldMutant[2]
+      df_stats[rowIndex, 23] <- ci_oldMutant[3]
+      df_stats[rowIndex, 24] <- sd_oldMutant
+      df_stats[rowIndex, 25] <- n_oldMutant
+
+      df_stats[rowIndex, 26] <- p_geno
+      df_stats[rowIndex, 27] <- p_age
+      df_stats[rowIndex, 28] <- p_genoXage
+
+      ##posthoc with Mann-Whitney U tests
+      posthoc_mutOld_vs_contrOld = wilcox.test(oldMutant[, colN], oldControl[, colN])$p.value
+      posthoc_contrYoung_vs_contrOld = wilcox.test(youngControl[, colN], oldControl[, colN])$p.value
+      posthoc_mutYoung_vs_contrOld = wilcox.test(youngMutant[, colN], oldControl[, colN])$p.value
+      posthoc_contrYoung_vs_mutOld = wilcox.test(youngControl[, colN], oldMutant[, colN])$p.value
+      posthoc_mutYoung_vs_mutOld = wilcox.test(youngMutant[, colN], oldMutant[, colN])$p.value
+      posthoc_mutYoung_vs_contrYoung = wilcox.test(youngMutant[, colN], youngControl[, colN])$p.value
+
+      df_stats[rowIndex, 29] <- posthoc_mutOld_vs_contrOld
+      df_stats[rowIndex, 30] <- posthoc_contrYoung_vs_contrOld
+      df_stats[rowIndex, 31] <- posthoc_mutYoung_vs_contrOld
+      df_stats[rowIndex, 32] <- posthoc_contrYoung_vs_mutOld
+      df_stats[rowIndex, 33] <- posthoc_mutYoung_vs_mutOld
+      df_stats[rowIndex, 34] <- posthoc_mutYoung_vs_contrYoung
+
+      df_temp_young <- df_temp[df_temp$age == 'young', ]
+      df_temp_old <- df_temp[df_temp$age == 'old', ]
+      df_temp_control <- df_temp[df_temp$genotype == 'control', ]
+      cohen.d_geno_inYoung <- cohen.d(d = df_temp_young[, colN], f = df_temp_young$genotype)
+      cohen.d_geno_inOld <- cohen.d(d = df_temp_old[, colN], f = df_temp_old$genotype)
+      cohen.d_age_inControl <- cohen.d(d = df_temp_control[, colN], f = df_temp_control$age)
+
+      df_stats[rowIndex, 35] <- (cohen.d_geno_inYoung$estimate)*(-1)      #*(-1) to show the direction of the effect as Mutant vs. Control (positive numbers mean increase in Mutants)
+      df_stats[rowIndex, 36] <- (cohen.d_geno_inYoung$conf.int[[2]])*(-1)
+      df_stats[rowIndex, 37] <- (cohen.d_geno_inYoung$conf.int[[1]])*(-1)
+
+      df_stats[rowIndex, 38] <- (cohen.d_geno_inOld$estimate)*(-1)        #*(-1) to show the direction of the effect as Mutant vs. Control (positive numbers mean increase in Mutants)
+      df_stats[rowIndex, 39] <- (cohen.d_geno_inOld$conf.int[[2]])*(-1)
+      df_stats[rowIndex, 40] <- (cohen.d_geno_inOld$conf.int[[1]])*(-1)
+
+      df_stats[rowIndex, 41] <- cohen.d_age_inControl$estimate            #do not multiply with (-1) to keep direction of effect as Old vs. Young (positive numbers mean increase in Old)
+      df_stats[rowIndex, 42] <- cohen.d_age_inControl$conf.int[[1]]
+      df_stats[rowIndex, 43] <- cohen.d_age_inControl$conf.int[[2]]
+
+      #calculate test statistic to determine if cohen.d_geno_inYoung differs significantly from cohen.d_geno_inOld
+      #formula described here: https://stats.stackexchange.com/questions/77269/statistical-comparison-of-2-independent-cohens-ds
+      v_geno_inOld <- 1/n_oldControl + 1/n_oldMutant + (((cohen.d_geno_inOld$estimate)*(-1))^2/(2*(n_oldControl+n_oldMutant)))
+      v_geno_inYoung <- 1/n_youngControl + 1/n_youngMutant + (((cohen.d_geno_inYoung$estimate)*(-1))^2/(2*(n_youngControl+n_youngMutant)))
+      z <- ((cohen.d_geno_inOld$estimate*(-1)) - (cohen.d_geno_inYoung$estimate*(-1)))/sqrt(v_geno_inOld+v_geno_inYoung)
+      df_stats[rowIndex, 44] <- z
+      pvalue2sided=2*pnorm(-abs(z))
+      df_stats[rowIndex, 45] <- pvalue2sided
+}
+
+colnames(df_stats) <- c('phenotype', 'mean_youngContr', 'ci_youngContr_upper', 'ci_youngContr_mean', 'ci_youngContr_lower', 'sd_youngContr', 'n_youngContr', 'mean_youngMut', 'ci_youngMut_upper', 'ci_youngMut_mean', 'ci_youngMut_lower', 'sd_youngMut', 'n_youngMut', 'mean_oldContr', 'ci_oldContr_upper', 'ci_oldContr_mean', 'ci_oldContr_lower', 'sd_oldContr', 'n_oldContr', 'mean_oldMut', 'ci_oldMut_upper', 'ci_oldMut_mean', 'ci_oldMut_lower', 'sd_oldMut', 'n_oldMut', 'art_p_geno', 'art_p_age', 'art_p_genoXage', 'post_mutOld_contrOld', 'post_contrYoung_contrOld', 'post_mutYoung_contrOld', 'post_contrYoung_mutOld', 'post_mutYoung_mutOld', 'post_mutYoung_contrYoung', 'cohen.d_genotype_inYoung', 'ci_cohen.d_genotype_inYoung_lower', 'ci_cohen.d_genotype_inYoung_upper', 'cohen.d_genotype_inOld', 'ci_cohen.d_genotype_inOld_lower', 'ci_cohen.d_genotype_inOld_upper', 'cohen.d_age_inControl', 'ci_cohen.d_age_inControl_lower', 'ci_cohen.d_age_inControl_upper', 'z_stat_cohen.d_genotype_inOld_vs_cohen.d_genotype_inYoung', 'p_cohen.d_genotype_inOld_vs_cohen.d_genotype_inYoung')
+
+write.csv(df_stats, file = 'Statistics_all_mTOR_non-parametric_ART_with age of onset_withZstatForCohenDcomparison.csv')
+
+
+
+
+__________________________________
+
+# Fisher exact test for histopathology data (binomial data; outcomes: pathology present/absent)
+
+ulimit -s 16384
+export R_MAX_VSIZE=100000000000
+R --max-ppsize 500000
+rm(list=ls())
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses/GMC histopatho for Fisher exact test/csv files")
+
+library(rcompanion)
+
+files <- dir()
+df_stats <- data.frame()
+rowindex <- 0
+
+for(file in files) {
+      rowindex <- rowindex + 1
+      df <- read.csv2(file, row.names = 1)       # file contains 6th row (no real data, called old_mutant2) to enable import without error message (error message with only 5 rows, header issue)
+      df <- df[1:4,]                             # delete 6th row (see above)
+      fisher_results <- fisher.test(df)
+      p <- fisher_results$p.value
+      m <- as.matrix(df)
+      PT = pairwiseNominalIndependence(m,
+                                       fisher = TRUE,
+                                       gtest  = FALSE,
+                                       chisq  = FALSE,
+                                       digits = 3)
+      df_stats[rowindex, 1] <- colnames(df)[2]      #name of parameter
+      df_stats[rowindex, 2] <- df[1, 1]           #value young_control, no pathology
+      df_stats[rowindex, 3] <- df[1, 2]           #value young_control, pathology
+      df_stats[rowindex, 4] <- df[2, 1]           #value old_control, no pathology
+      df_stats[rowindex, 5] <- df[2, 2]           #value old_control, pathology
+      df_stats[rowindex, 6] <- df[3, 1]           #value young_mutant, no pathology
+      df_stats[rowindex, 7] <- df[3, 2]           #value young_mutant, pathology
+      df_stats[rowindex, 8] <- df[4, 1]           #value old_mutant, no pathology
+      df_stats[rowindex, 9] <- df[4, 2]           #value old_mutant, pathology
+      df_stats[rowindex, 10] <- p                    #p value Fisher's exact test over all groups
+      df_stats[rowindex, 11] <- PT$p.Fisher[1]       # unadjusted p value posthoc Fisher's exact test, young_control : old_control
+      df_stats[rowindex, 12] <- PT$p.Fisher[2]       # unadjusted p value posthoc Fisher's exact test, young_control : young_mutant
+      df_stats[rowindex, 13] <- PT$p.Fisher[3]       # unadjusted p value posthoc Fisher's exact test, young_control : old_mutant
+      df_stats[rowindex, 14] <- PT$p.Fisher[4]       # unadjusted p value posthoc Fisher's exact test, old_control : young_mutant
+      df_stats[rowindex, 15] <- PT$p.Fisher[5]       # unadjusted p value posthoc Fisher's exact test, old_control : old_mutant
+      df_stats[rowindex, 16] <- PT$p.Fisher[6]       # unadjusted p value posthoc Fisher's exact test, young_mutant : old_mutant
+      df_stats[rowindex, 17] <- PT$p.adj.Fisher[1]    # adjusted p value posthoc Fisher's exact test, young_control : old_control
+      df_stats[rowindex, 18] <- PT$p.adj.Fisher[2]     # adjusted p value posthoc Fisher's exact test, young_control : young_mutant
+      df_stats[rowindex, 19] <- PT$p.adj.Fisher[3]       # adjusted p value posthoc Fisher's exact test, young_control : old_mutant
+      df_stats[rowindex, 20] <- PT$p.adj.Fisher[4]       # adjusted p value posthoc Fisher's exact test, old_control : young_mutant
+      df_stats[rowindex, 21] <- PT$p.adj.Fisher[5]       # adjusted p value posthoc Fisher's exact test, old_control : old_mutant
+      df_stats[rowindex, 22] <- PT$p.adj.Fisher[6]       # adjusted p value posthoc Fisher's exact test, young_mutant : old_mutant
+}
+
+colnames(df_stats) <- c('phenotype', 'n_young_control_noPathol', 'n_young_control_pathol', 'n_old_control_noPathol', 'n_old_control_pathol', 'n_young_mutant_noPathol', 'n_young_mutant_pathol', 'n_old_mutant_noPathol', 'n_old_mutant_pathol', 'p_fisher', 'posthoc_young_control_vs_old_control_p_unadj', 'posthoc_young_control_vs_young_mutant_p_unadj', 'posthoc_young_control_vs_old_mutant_p_unadj', 'posthoc_old_control_vs_young_mutant_p_unadj', 'posthoc_old_control_vs_old_mutant_p_unadj', 'posthoc_young_mutant_vs_old_mutant_p_unadj', 'posthoc_young_control_vs_old_control_p_adj', 'posthoc_young_control_vs_young_mutant_p_adj', 'posthoc_young_control_vs_old_mutant_p_adj', 'posthoc_old_control_vs_young_mutant_p_adj', 'posthoc_old_control_vs_old_mutant_p_adj', 'posthoc_young_mutant_vs_old_mutant_p_adj')
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses/GMC histopatho for Fisher exact test")
+write.csv(df_stats, file = 'Statistics_Fisher exact test_mTOR_histopathology.csv')
+
+
+
+
+
+
+
+________________________________________________________
+
+# PCA of continuous phenotypic variables
+# impute missing values using R package 'mice'
+# imputation is done group by group
+
+ulimit -s 16384
+export R_MAX_VSIZE=100000000000
+R --max-ppsize 500000
+rm(list=ls())
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses")
+
+library(FactoMineR) # for PCA
+library(factoextra) # for PCA
+library(plyr) # for revalue
+library(mice) # for imputation
+
+set.seed(12)
+
+df <- read.csv2('Merged_all_final6_forPCA_onlyContinVar.csv')
+df$group <- revalue(df$group, c('young_control' = 'Young WT', 'young_mutant' = 'Young mTOR mutant', 'old_control' = 'Old WT', 'old_mutant' = 'Old mTOR mutant'))
+df$group <- factor(df$group, levels = c('Young WT', 'Young mTOR mutant', 'Old WT', 'Old mTOR mutant'))
+
+
+for(i in 2:ncol(df)) {
+      df[, i] <- as.numeric(as.character(df[, i]))
+}
+
+
+groups <- c('Young WT', 'Young mTOR mutant', 'Old WT', 'Old mTOR mutant')
+c <- c(1,2,3,4)
+
+for (i in c){
+      if (i== 1){
+            df_mice <- df[df$group == groups[i],]
+            mice_imputes <- mice(df_mice, method='cart', m=1, threshold=1.2)
+      } else {
+            df_mice_temp <- df[df$group == groups[i],]
+            mice_imputes_temp <- mice(df_mice_temp, method='cart', m=1, threshold=1.2)
+            mice_imputes <- rbind(mice_imputes, mice_imputes_temp)
+      }
+}
+
+
+Imputed_data=complete(mice_imputes)
+write.csv(Imputed_data, file = 'Merged_all_final6_forPCA_onlyContinVar_imputedWithMice_groupWise_v2.csv')
+
+
+##start here to re-run analysis:
+#Imputed_data <- read.csv2('Merged_all_final6_forPCA_onlyContinVar_imputedWithMice_groupWise_v2.csv')
+#Imputed_data$group <- factor(Imputed_data$group, levels = c('Young WT', 'Young mTOR mutant', 'Old WT', 'Old mTOR mutant'))
+
+
+#for(i in 2:ncol(Imputed_data)) {
+#      Imputed_data[, i] <- as.numeric(as.character(Imputed_data[, i]))
+#}
+
+pca_obj <- PCA(Imputed_data[,2:ncol(Imputed_data)], ncp=20, scale.unit=TRUE)
+
+my_colors <- c('#999999', '#33CC33', '#000000', '#006600' )
+
+#visualize individual animals on PCA plane with group assignments
+f <- fviz_pca_ind(pca_obj, geom = 'point', pointsize = 3, pointshape = 16, alpha = 0.6, axes = c(1,2), habillage = Imputed_data$group, addEllipses = TRUE) +
+        scale_color_manual(values = my_colors) +
+        scale_fill_manual(values = my_colors) +
+        theme_classic()
+
+ggsave(filename = 'PCA_phenotypes_mTOR_revisedColors_ImputWithMice_GroupWise.svg', device = 'svg')
+
+
+
+
+
+
+
+
+
+________________________________________________________
+
+## Use intraclass correlation (look at ICC1, intraclass correlation, R psych package) to compare cohen's d values of genotype effects in young vs. old
+## http://www.personality-project.org/r/html/ICC.html
+
+ulimit -s 16384
+export R_MAX_VSIZE=100000000000
+R --max-ppsize 500000
+rm(list=ls())
+
+library(psych) # for intraclass correlation
+
+setwd("/Users/danehninger/Documents/Aging_projects/Hypomorphic mTOR mutants/Results GMC/mTor_hypomorphic_raw_data_with stats and analyses")
+df <- read.csv2('Statistics_2-wayANOVAs_FisherLSD_ARTnonPara_FisherExact_merged_mTOR_allParameters.csv')
+
+df$cohen.d_age_inControl <- as.numeric(as.character(df$cohen.d_age_inControl))
+df$cohen.d_genotype_inOld <- as.numeric(as.character(df$cohen.d_genotype_inOld))
+df$cohen.d_genotype_inYoung <- as.numeric(as.character(df$cohen.d_genotype_inYoung))
+df$aov_p_genoXage <- as.numeric(as.character(df$aov_p_genoXage))
+
+
+#all: include all phenotypes that are either (age-sensitive AND (geno-sensitive OR affected by age x geno interaction)) OR (not age-sensitive but geno-sensitive)
+df_all <- subset(df, ((age_sensitive_intervExp == 'True') & ((geno_sensitive == 'True') | (aov_p_genoXage < 0.05)) | (geno_but_not_age_sensitive == 'True')))
+write.csv(df_all, file='test_all.csv')
+df_all_cohen = df_all[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
+#intraclass correlation, psych package
+#all phenotypes (all as defined above)
+icc = ICC(df_all_cohen)
+all_icc1_ICC1 = icc$results$ICC[1]
+all_icc1_ICC1_upper = icc$results[,'upper bound'][1]
+all_icc1_ICC1_lower = icc$results[,'lower bound'][1]
+all_icc1_ICC1_p = icc$results$p[1]
+cor = cor.test(x=df_all_cohen$cohen.d_genotype_inYoung, y=df_all_cohen$cohen.d_genotype_inOld, method='pearson')
+
+#age- and geno-sensitive, effects in opposite direction (anti-aging)
+df_antiage <- subset(df, ((age_sensitive_intervExp == 'True') & ((geno_sensitive == 'True') | (aov_p_genoXage < 0.05)) & ((cohen.d_age_inControl * cohen.d_genotype_inOld) < 0)))
+write.csv(df_antiage, file='test_antiage.csv')
+df_antiage_cohen = df_antiage[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
+#all anti-age phenotypes (as defined above)
+icc = ICC(df_antiage_cohen)
+antiage_icc1_ICC1 = icc$results$ICC[1]
+antiage_icc1_ICC1_upper = icc$results[,'upper bound'][1]
+antiage_icc1_ICC1_lower = icc$results[,'lower bound'][1]
+antiage_icc1_ICC1_p = icc$results$p[1]
+cor = cor.test(x=df_antiage_cohen$cohen.d_genotype_inYoung, y=df_antiage_cohen$cohen.d_genotype_inOld, method='pearson')
+
+#age- and geno-sensitive, effects in same direction (pro-aging)
+df_proage <- subset(df, ((age_sensitive_intervExp == 'True') & ((geno_sensitive == 'True') | (aov_p_genoXage < 0.05)) & ((cohen.d_age_inControl * cohen.d_genotype_inOld) > 0)))
+write.csv(df_proage, file='test_proage.csv')
+df_proage_cohen = df_proage[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
+#all pro-age phenotypes (as defined above)
+icc = ICC(df_proage_cohen)
+proage_icc1_ICC1 = icc$results$ICC[1]
+proage_icc1_ICC1_upper = icc$results[,'upper bound'][1]
+proage_icc1_ICC1_lower = icc$results[,'lower bound'][1]
+proage_icc1_ICC1_p = icc$results$p[1]
+cor = cor.test(x=df_proage_cohen$cohen.d_genotype_inYoung, y=df_proage_cohen$cohen.d_genotype_inOld, method='pearson')
+
+
+#geno-sensitive but not age-sensitive
+df_geno <- subset(df, ((age_sensitive_intervExp == 'False') & (geno_sensitive == 'True')))
+write.csv(df_geno, file='test_geno.csv')
+df_geno_cohen = df_geno[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
+#all geno phenotypes (as defined above)
+icc = ICC(df_geno_cohen)
+geno_icc1_ICC1 = icc$results$ICC[1]
+geno_icc1_ICC1_upper = icc$results[,'upper bound'][1]
+geno_icc1_ICC1_lower = icc$results[,'lower bound'][1]
+geno_icc1_ICC1_p = icc$results$p[1]
+cor = cor.test(x=df_geno_cohen$cohen.d_genotype_inYoung, y=df_geno_cohen$cohen.d_genotype_inOld, method='pearson')
