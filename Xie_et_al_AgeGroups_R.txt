@@ -2,12 +2,6 @@
 
 ## one-way ANOVA with Fisher LSD posthoc tests
 
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Altersgruppen_GMC/Results_GMC/DZNE_C57BL_6J_raw_data/AllRawFiles_forMerge")
 library(effsize) # for calculation of cohen's d effect sizes
 library(Rmisc) # for calculation of confidence intervals
 library(agricolae) # for Fisher LSD posthoc test, LSD.test()
@@ -20,8 +14,8 @@ colIndex <- 9
 rowIndex <- 0
 cn <- colnames(df)
 
-for(i in 10:188) {
-      # loop through columns 10-301, i.e. all columns with phenotype data
+for(i in 10:ncol(df)) {
+      # loop through columns 10-end, i.e. all columns with phenotype data
       colIndex <- colIndex + 1
       rowIndex <- rowIndex + 1
       colN <- cn[colIndex]
@@ -176,28 +170,20 @@ _____________________________________
 
 ## for non-parametric measures: Kruskal Wallis Test followed by Dunn Test where appropriate
 
-
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Altersgruppen_GMC/Results_GMC/DZNE_C57BL_6J_raw_data/AllRawFiles_forMerge")
 library(effsize)
 library(Rmisc)
 library(FSA) #for Dunn test, posthoc test for Kruskal Wallis Test
 
 df <- read.csv2('MergePhenotypes_v4_non-parametric_for_KruskalWallis.csv')
 df_stats <- data.frame()
-#df[, 'average_bw'] <- as.numeric(df[, 'average_bw'])
 df_processed <- data.frame()
 
 colIndex <- 9
 rowIndex <- 0
 cn <- colnames(df)
 
-for(i in 10:16) {
-      # loop through columns 10-16, i.e. all columns with phenotype data
+for(i in 10:ncol(df)) {
+      # loop through columns 10-end, i.e. all columns with phenotype data
       colIndex <- colIndex + 1
       rowIndex <- rowIndex + 1
       colN <- cn[colIndex]
@@ -355,13 +341,6 @@ __________________________________
 
 ## Fisher's exact test for histopathology data (binomial data; outcomes: pathology present/absent)
 
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Altersgruppen_GMC/Results_GMC/DZNE_C57BL_6J_raw_data/AllRawFiles_forMerge/GMC histopatho for Fisher exact test/csv files")
-
 library(rcompanion)
 
 files <- dir()
@@ -433,20 +412,9 @@ write.csv(df_stats, file = 'Statistics_Fisher exact test_ageGroups_histopatholog
 
 
 
-
 ________________________________________________________
 
 ## PCA of continuous phenotypic variables
-# impute missing values using R package 'mice'
-# imputation is done group by group
-
-
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Altersgruppen_GMC/Results_GMC/DZNE_C57BL_6J_raw_data/AllRawFiles_forMerge/")
 
 library(FactoMineR) # for PCA
 library(factoextra) # for PCA
@@ -478,12 +446,10 @@ for (i in c){
 
 
 Imputed_data=complete(mice_imputes)
+
 write.csv(Imputed_data, file = 'MergePhenotypes_v4_forPCA_onlyContinVar_imputedWithMice_groupWise.csv')
 
-#manually reorder groups in 'MergePhenotypes_v4_forPCA_onlyContinVar_imputedWithMice_groupWise.csv' to bring them in the same order as in
-#the df$age column
-
-df <- read.csv2('MergePhenotypes_v4_forPCA_onlyContinVar_imputedWithMice_groupWise_meanPHA_ordered.csv')
+df <- read.csv2('MergePhenotypes_v4_forPCA_onlyContinVar_imputedWithMice_groupWise_ordered.csv')
 df$age <- factor(df$age, levels = c('3_mo', '5_mo', '8_mo', '14_mo', '20_mo', '26_mo'))
 
 for(i in 2:ncol(df)) {
@@ -494,8 +460,6 @@ pca_obj <- PCA(df[,2:ncol(df)], scale.unit=TRUE)
 
 #visualize individual animals on PCA plane with group assignments
 f <- fviz_pca_ind(pca_obj, geom = 'point', pointsize = 3, pointshape = 16, alpha = 0.6, axes = c(1,2), habillage = df$age, addEllipses = TRUE) +
-        #scale_color_manual(values = my_colors) +
-        #scale_fill_manual(values = my_colors) +
         theme_classic()
 
-ggsave(filename = 'PCA_phenotypes_AgeGroups_ImputedWithMice_GroupWise_meanPHA_ordered.svg', device = 'svg')
+ggsave(filename = 'PCA_phenotypes_AgeGroups.svg', device = 'svg')
