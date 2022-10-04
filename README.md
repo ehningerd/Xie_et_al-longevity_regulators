@@ -4,13 +4,8 @@ Code used for analysis of data in the original research paper "Deep Phenotyping 
 
 
 If you use this software, please cite it as below:
-
 Author: Dan Ehninger
-
 Title: Deep Phenotyping and Lifetime Trajectories Reveal Limited Effects of Longevity Regulators on the Aging Process in C57BL/6J Mice
-
 Version: v1.0.0
-
 Date-released: 2022-10-04
-
 DOI: 10.5281/zenodo.7142629
