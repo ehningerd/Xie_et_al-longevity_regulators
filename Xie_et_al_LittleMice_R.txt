@@ -4,13 +4,6 @@
 ## Add 95% confidence intervals for coefficients of age, geno and age x geno interaction
 ## Add significance test for Cohen's d (treatment effect size) in young vs old mice
 
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Little mice_Ghrh/GMC results/Ghrhr_raw_data/AllRawFiles_forMerge/Statistical_analysis")
-
 library(effsize) # for calculation of cohen's d effect sizes
 library(Rmisc) # for calculation of confidence intervals
 library(agricolae) # for Fisher LSD posthoc test
@@ -144,7 +137,6 @@ for(i in 10:ncol(df)) {
       df_stats[rowIndex, 49] <- cohen.d_age_inControl$conf.int[[2]]
 
       #calculate test statistic to determine if cohen.d_geno_inYoung differs significantly from cohen.d_geno_inOld
-      #formula described here: https://stats.stackexchange.com/questions/77269/statistical-comparison-of-2-independent-cohens-ds
       v_geno_inOld <- 1/n_oldControl + 1/n_oldMutant + (((cohen.d_geno_inOld$estimate))^2/(2*(n_oldControl+n_oldMutant)))
       v_geno_inYoung <- 1/n_youngControl + 1/n_youngMutant + (((cohen.d_geno_inYoung$estimate))^2/(2*(n_youngControl+n_youngMutant)))
       z <- ((cohen.d_geno_inOld$estimate) - (cohen.d_geno_inYoung$estimate))/sqrt(v_geno_inOld+v_geno_inYoung)
@@ -164,13 +156,6 @@ _____________________________________
 
 ## for analysis of non-parametric data; use aligned rank transform
 ## add significance test for Cohen's d (treatment effect size) in young vs old mice
-
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Little mice_Ghrh/GMC results/Ghrhr_raw_data/AllRawFiles_forMerge/Statistical_analysis")
 
 library(effsize) # for calculation of cohen's d effect sizes
 library(Rmisc) # for calculation of confidence intervals
@@ -296,7 +281,6 @@ for(i in 10:ncol(df)) {
       df_stats[rowIndex, 43] <- cohen.d_age_inControl$conf.int[[2]]
 
       #calculate test statistic to determine if cohen.d_geno_inYoung differs significantly from cohen.d_geno_inOld
-      #formula described here: https://stats.stackexchange.com/questions/77269/statistical-comparison-of-2-independent-cohens-ds
       v_geno_inOld <- 1/n_oldControl + 1/n_oldMutant + (((cohen.d_geno_inOld$estimate)*(-1))^2/(2*(n_oldControl+n_oldMutant)))
       v_geno_inYoung <- 1/n_youngControl + 1/n_youngMutant + (((cohen.d_geno_inYoung$estimate)*(-1))^2/(2*(n_youngControl+n_youngMutant)))
       z <- ((cohen.d_geno_inOld$estimate*(-1)) - (cohen.d_geno_inYoung$estimate*(-1)))/sqrt(v_geno_inOld+v_geno_inYoung)
@@ -318,15 +302,6 @@ _____________________________________
 
 ## for analysis of non-parametric data; use aligned rank transform
 ## add significance test for Cohen's d (treatment effect size) in young vs old mice
-
-
-## in terminal:
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Little mice_Ghrh/GMC results/Ghrhr_raw_data/AllRawFiles_forMerge/Statistical_analysis")
 
 library(effsize) # for calculation of cohen's d effect sizes
 library(Rmisc) # for calculation of confidence intervals
@@ -378,7 +353,7 @@ for(i in 10:ncol(df)) {
       df_temp$genotype <- factor(df_temp$genotype, levels = c('mutant', 'control'))
       df_temp$age<- factor(df_temp$age, levels = c('old', 'young'))
 
-      m = art(df_temp[, colN] ~ genotype * age, data = df_temp) # uses a linear mixed model
+      m = art(df_temp[, colN] ~ genotype * age, data = df_temp)
       np_anova <- anova(m)
       p_geno <- np_anova$'Pr(>F)'[1]
       p_age <- np_anova$'Pr(>F)'[2]
@@ -452,7 +427,6 @@ for(i in 10:ncol(df)) {
       df_stats[rowIndex, 43] <- cohen.d_age_inControl$conf.int[[2]]
 
       #calculate test statistic to determine if cohen.d_geno_inYoung differs significantly from cohen.d_geno_inOld
-      #formula described here: https://stats.stackexchange.com/questions/77269/statistical-comparison-of-2-independent-cohens-ds
       v_geno_inOld <- 1/n_oldControl + 1/n_oldMutant + (((cohen.d_geno_inOld$estimate)*(-1))^2/(2*(n_oldControl+n_oldMutant)))
       v_geno_inYoung <- 1/n_youngControl + 1/n_youngMutant + (((cohen.d_geno_inYoung$estimate)*(-1))^2/(2*(n_youngControl+n_youngMutant)))
       z <- ((cohen.d_geno_inOld$estimate*(-1)) - (cohen.d_geno_inYoung$estimate*(-1)))/sqrt(v_geno_inOld+v_geno_inYoung)
@@ -472,15 +446,6 @@ write.csv(df_stats, file = 'Statistics_all_ghrhr_non-parametric_ART_withZstatFor
 ________________________________________________________
 
 # PCA of continuous phenotypic variables
-# impute missing values using R package 'mice'
-# imputation is done group by group
-
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
-
-setwd("/Users/danehninger/Documents/Aging_projects/Little mice_Ghrh/GMC results/Ghrhr_raw_data/AllRawFiles_forMerge/Statistical_analysis")
 
 library(FactoMineR) # for PCA
 library(factoextra) # for PCA
@@ -514,15 +479,6 @@ for (i in c){
 
 
 Imputed_data=complete(mice_imputes)
-write.csv(Imputed_data, file = 'All parameters_merged_v5_forPCA_onlyContinVar_imputedWithMice_groupWise.csv')
-
-##start here to re-run analysis:
-#Imputed_data <- read.csv2('All parameters_merged_v5_forPCA_onlyContinVar_imputedWithMice_groupWise.csv')
-#Imputed_data$group <- factor(Imputed_data$group, levels = c('Young WT', 'Young Ghrhr mutant', 'Old WT', 'Old Ghrhr mutant'))
-
-#for(i in 2:ncol(Imputed_data)) {
-#      Imputed_data[, i] <- as.numeric(as.character(Imputed_data[, i]))
-#}
 
 pca_obj <- PCA(Imputed_data[,2:ncol(Imputed_data)], ncp=20, scale.unit=TRUE)
 
@@ -534,27 +490,18 @@ f <- fviz_pca_ind(pca_obj, geom = 'point', pointsize = 3, pointshape = 16, alpha
         scale_fill_manual(values = my_colors) +
         theme_classic()
 
-ggsave(filename = 'PCA_phenotypes_little_revisedColors_ImputWithMice_GroupWise.svg', device = 'svg')
+ggsave(filename = 'PCA_phenotypes_little.svg', device = 'svg')
 
 
 
 
 ________________________________________________________
 
-## Use intraclass correlation (look at ICC1, intraclass correlation, R psych package)
-## to compare cohen's d values of genotype effects in young vs. old
-## http://www.personality-project.org/r/html/ICC.html
-
-ulimit -s 16384
-export R_MAX_VSIZE=100000000000
-R --max-ppsize 500000
-rm(list=ls())
+## Use intraclass correlation to compare cohen's d values of genotype effects in young vs. old
 
 library(psych) # for intraclass correlation
 
-setwd("/Users/danehninger/Documents/Aging_projects/Little mice_Ghrh/GMC results/Ghrhr_raw_data/AllRawFiles_forMerge/Statistical_analysis")
-
-df <- read.csv2('Statistics_2-wayANOVAs_FisherLSD_ART_nonparam_ghrhr_allParameters_withZstatForCohenDcomparison_withCIforCoeff_onlyTumorFreeMice.csv')
+df <- read.csv2('Statistics_2-wayANOVAs_FisherLSD_ART_nonparam_ghrhr_allParameters_withZstatForCohenDcomparison_withCIforCoeff.csv')
 
 df$cohen.d_age_inControl <- as.numeric(as.character(df$cohen.d_age_inControl))
 df$cohen.d_genotype_inOld <- as.numeric(as.character(df$cohen.d_genotype_inOld))
@@ -566,9 +513,8 @@ df$aov_p_genoXage <- as.numeric(as.character(df$aov_p_genoXage))
 
 #all: include all phenotypes that are either (age-sensitive AND (geno-sensitive OR affected by age x geno interaction)) OR (not age-sensitive but geno-sensitive)
 df_all <- subset(df, (((aov_p_age < 0.05) & ((aov_p_geno < 0.05) | (aov_p_genoXage < 0.05))) | ((aov_p_age > 0.05) & ((aov_p_geno < 0.05) | (aov_p_genoXage < 0.05)))))
-write.csv(df_all, file='parameters_allSets_onlyTumorFreeMice.csv')
+write.csv(df_all, file='parameters_allSets.csv')
 df_all_cohen = df_all[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
-#intraclass correlation, psych package
 #all phenotypes (all as defined above)
 icc = ICC(df_all_cohen)
 all_icc1_ICC1 = icc$results$ICC[1]
@@ -579,7 +525,7 @@ cor = cor.test(x=df_all_cohen$cohen.d_genotype_inYoung, y=df_all_cohen$cohen.d_g
 
 #age- and geno-sensitive, effects in opposite direction (anti-aging)
 df_antiage <- subset(df, ((aov_p_age < 0.05) & ((aov_p_geno < 0.05) | (aov_p_genoXage < 0.05)) & ((cohen.d_age_inControl * cohen.d_genotype_inOld) < 0)))
-write.csv(df_antiage, file='parameters_antiage_onlyTumorFreeMice.csv')
+write.csv(df_antiage, file='parameters_antiage.csv')
 df_antiage_cohen = df_antiage[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
 #all anti-age phenotypes (as defined above)
 icc = ICC(df_antiage_cohen)
@@ -591,7 +537,7 @@ cor = cor.test(x=df_antiage_cohen$cohen.d_genotype_inYoung, y=df_antiage_cohen$c
 
 #age- and geno-sensitive, effects in same direction (pro-aging)
 df_proage <- subset(df, ((aov_p_age < 0.05) & ((aov_p_geno < 0.05) | (aov_p_genoXage < 0.05)) & ((cohen.d_age_inControl * cohen.d_genotype_inOld) > 0)))
-write.csv(df_proage, file='parameters_proage_onlyTumorFreeMice.csv')
+write.csv(df_proage, file='parameters_proage.csv')
 df_proage_cohen = df_proage[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
 #all pro-age phenotypes (as defined above)
 icc = ICC(df_proage_cohen)
@@ -601,10 +547,9 @@ proage_icc1_ICC1_lower = icc$results[,'lower bound'][1]
 proage_icc1_ICC1_p = icc$results$p[1]
 cor = cor.test(x=df_proage_cohen$cohen.d_genotype_inYoung, y=df_proage_cohen$cohen.d_genotype_inOld, method='pearson')
 
-
 #geno-sensitive but not age-sensitive
 df_geno <- subset(df, ((aov_p_age > 0.05) & ((aov_p_geno < 0.05) | (aov_p_genoXage < 0.05))))
-write.csv(df_geno, file='parameters_geno_onlyTumorFreeMice.csv')
+write.csv(df_geno, file='parameters_geno.csv')
 df_geno_cohen = df_geno[, c('cohen.d_genotype_inYoung', 'cohen.d_genotype_inOld')]
 #all geno phenotypes (as defined above)
 icc = ICC(df_geno_cohen)
